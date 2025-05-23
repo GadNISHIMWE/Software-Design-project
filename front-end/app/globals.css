@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --primary-light: #4caf50;
+  --secondary: #f5f5f5;
+  --accent: #ff9800;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-300;
+  }
+}
+
+@layer components {
+  .sidebar-link {
+    @apply flex items-center gap-2 text-sm py-2 px-3 rounded-md transition-colors;
+  }
+
+  .sidebar-link.active {
+    @apply bg-[#2e7d32] text-white;
+  }
+
+  .sidebar-link:hover:not(.active) {
+    @apply bg-gray-100;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#2e7d32];
+  }
+
+  .btn-primary {
+    @apply bg-[#2e7d32] text-white hover:bg-[#1b5e20] px-4 py-2 rounded-md transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-[#2e7d32] border border-[#2e7d32] hover:bg-gray-50 px-4 py-2 rounded-md transition-colors;
+  }
+}
