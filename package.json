@@ -1,0 +1,12 @@
+{
+  "name": "greenhouse-system",
+  "version": "1.0.0",
+  "description": "Greenhouse System Project",
+  "scripts": {
+    "start": "concurrently \"cd backend && php artisan serve\" \"cd front-end && npm run dev\"",
+    "install-all": "cd front-end && npm install && cd ../backend && composer install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 

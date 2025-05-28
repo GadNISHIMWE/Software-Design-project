@@ -1,15 +1,15 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function SignIn() {
   const router = useRouter()
+  const { login, loading, error } = useAuth()
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
   })
 
@@ -18,13 +18,16 @@ export default function SignIn() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would authenticate with a backend here
-    console.log("Signing in with:", formData)
 
-    // Redirect to verification page
-    router.push("/auth/verify")
+    try {
+      await login(formData)
+      router.push("/user/dashboard")
+    } catch (err) {
+      // Error is handled by the useAuth hook
+      console.error('Login error:', err)
+    }
   }
 
   return (
@@ -39,67 +42,67 @@ export default function SignIn() {
               <h1 className="text-2xl font-bold">Welcome</h1>
               <h2 className="text-xl font-bold">To</h2>
               <p className="text-xl font-bold">Intelligent IOT- Driven Green house</p>
-              <p className="text-xl font-bold">Authomation System</p>
+              <p className="text-xl font-bold">Automation System</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
                 <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-                  placeholder="Enter your username"
+                  type="email"
+                  id="email"
+                  name="email"
                   required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
 
               <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
                 <input
                   type="password"
                   id="password"
                   name="password"
+                  required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-                  placeholder="Enter your password"
-                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
-                <div className="mt-1 text-right">
-                  <Link href="/auth/forgot-password" className="text-xs text-[#5D3FD3] hover:underline">
-                    Forgot password
-                  </Link>
-                </div>
               </div>
 
-              <div className="pt-2">
+              <div>
                 <button
                   type="submit"
-                  className="w-full bg-[#5D3FD3] text-white py-2 rounded-md transition-colors font-bold"
+                  disabled={loading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2e7d32] hover:bg-[#1b5e20] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  SIGN IN
+                  {loading ? "Signing in..." : "Sign in"}
                 </button>
               </div>
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm">Don&apos;t have an account</p>
-              <Link href="/auth/signup" className="font-medium text-[#5D3FD3] hover:underline text-lg">
-                SIGN Up here
-              </Link>
-              <p className="mt-1">or</p>
-              <Link href="/auth/guest" className="font-medium text-[#5D3FD3] hover:underline">
-                Login as Guest
-              </Link>
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link href="/auth/signup" className="font-medium text-[#2e7d32] hover:text-[#1b5e20]">
+                  Sign up
+                </Link>
+              </p>
             </div>
           </div>
         </div>
-
-        <footer className="text-white text-xs text-center py-2 w-full relative z-10">
-          © {new Date().getFullYear()} Smart Greenhouse Management System
-        </footer>
       </div>
     </div>
   )

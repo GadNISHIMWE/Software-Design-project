@@ -1,32 +1,54 @@
 "use client"
 
+import Link from "next/link"
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { User, Mail, Lock } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function SignUp() {
   const router = useRouter()
+  const { register, loading: authLoading, error: authError } = useAuth()
   const [formData, setFormData] = useState({
-    username: "",
+    name: "",
     email: "",
     password: "",
-    confirmPassword: "",
+    password_confirmation: "",
   })
+  const [error, setError] = useState("")
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setError("")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would register with a backend here
-    console.log("Signing up with:", formData)
+    setError("")
 
-    // Redirect to verification page
-    router.push("/auth/verify")
+    try {
+      // Validate passwords match
+      if (formData.password !== formData.password_confirmation) {
+        setError("Passwords do not match")
+        return
+      }
+
+      // Validate password strength
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long")
+        return
+      }
+
+      // Register user with backend
+      const response = await register(formData)
+      
+      // Redirect to OTP verification page with email
+      router.push(`/auth/verify?email=${encodeURIComponent(formData.email)}`)
+    } catch (err: any) {
+      setError(err.message || "An error occurred during registration")
+    }
   }
 
   return (
@@ -39,20 +61,28 @@ export default function SignUp() {
           <div className="w-full max-w-md p-8">
             <div className="mb-8 text-center">
               <h1 className="text-2xl font-bold">SIGNUP FORM</h1>
+              <p className="text-sm text-gray-600 mt-2">Join as a Farmer/User</p>
             </div>
+
+            {(error || authError) && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                {error || authError}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
+                  id="name"
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none"
-                  placeholder="Enter your username"
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
+                  placeholder="Enter your name"
                   required
+                  disabled={authLoading}
                 />
               </div>
 
@@ -64,9 +94,10 @@ export default function SignUp() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none"
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
                   placeholder="Enter your email"
                   required
+                  disabled={authLoading}
                 />
               </div>
 
@@ -78,9 +109,10 @@ export default function SignUp() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none"
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
                   placeholder="Enter New password"
                   required
+                  disabled={authLoading}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                   *Use strong password
@@ -91,25 +123,34 @@ export default function SignUp() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  id="password_confirmation"
+                  name="password_confirmation"
+                  value={formData.password_confirmation}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none"
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
                   placeholder="Confirm password"
                   required
+                  disabled={authLoading}
                 />
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full bg-[#5D3FD3] text-white py-2 rounded-md transition-colors font-bold"
+                  disabled={authLoading}
+                  className="w-full bg-[#5D3FD3] text-white py-2 rounded-md transition-colors font-bold hover:bg-[#4A2FB8] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  SIGN UP
+                  {authLoading ? "CREATING ACCOUNT..." : "SIGN UP"}
                 </button>
               </div>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm">Already have an account?</p>
+              <Link href="/auth/signin" className="font-medium text-[#5D3FD3] hover:underline text-lg">
+                Sign In here
+              </Link>
+            </div>
           </div>
         </div>
 
