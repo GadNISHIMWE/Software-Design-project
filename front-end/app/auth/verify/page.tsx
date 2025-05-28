@@ -22,7 +22,7 @@ export default function VerifyIdentity() {
       return
     }
 
-    // Start countdown for resend button
+    // Only start countdown for resend button
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
       return () => clearTimeout(timer)
@@ -50,13 +50,19 @@ export default function VerifyIdentity() {
     setError("")
 
     try {
-      const otpCode = code.join("")
-      const response = await verifyOTP(email!, otpCode)
+      // Get email from URL params or localStorage
+      const emailToVerify = email || localStorage.getItem('pendingVerificationEmail')
       
-      // The redirection is now handled in the useAuth hook
-      // No need to explicitly redirect here
+      if (!emailToVerify) {
+        setError("Email not found. Please try logging in again.")
+        return
+      }
+
+      const otpCode = code.join("")
+      await verifyOTP(emailToVerify, otpCode)
+      // Redirection is handled by the useAuth hook after successful verification
     } catch (err: any) {
-      setError(err.message || "Invalid verification code")
+      setError(err.message || "An error occurred during verification")
     }
   }
 

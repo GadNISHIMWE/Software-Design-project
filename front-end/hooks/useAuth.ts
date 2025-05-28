@@ -25,34 +25,27 @@ export function useAuth() {
       setError(null);
       
       const response = await api.post<AuthResponse>('/api/login', credentials);
+
+      console.log('Login API response:', response);
+      console.log('Login API response.data:', response.data);
       
-      if (response.status === 403 && response.data.requires_otp_verification) {
+      if (response.data && response.data.requires_otp_verification) {
+        console.log('Login successful, OTP verification required.', response.data);
         if (response.data.email) {
+          localStorage.setItem('pendingVerificationEmail', response.data.email);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          delete api.defaults.headers.common['Authorization'];
           router.push(`/auth/verify?email=${encodeURIComponent(response.data.email)}`);
+          return response.data;
         } else {
           setError(response.data.message || 'Login failed: Email required for verification.');
+          throw new Error(response.data.message || 'Login failed: Email required for verification.');
         }
-        return response.data;
       }
       
-      if (response.data.status === 'success' && response.data.data) {
-        const { user, token } = response.data.data;
-        
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        return response.data;
-      }
-      
-      if (response.data.status === 'error') {
-        setError(response.data.message || 'Login failed');
-        throw new Error(response.data.message || 'Login failed');
-      }
-      
-      setError('An unexpected error occurred during login.');
-      throw new Error('An unexpected error occurred during login.');
+      setError('Unexpected response from server. OTP verification required.');
+      throw new Error('Unexpected response from server. OTP verification required.');
     } catch (err: any) {
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
@@ -107,14 +100,24 @@ export function useAuth() {
       const response = await api.post<AuthResponse>('/api/verify-otp', { email, otp });
       
       if (response.data.status === 'success' && response.data.data) {
-        const { user, token } = response.data.data;
+        const { user, token, is_admin } = response.data.data;
+        
+        console.log('OTP verification successful. Received token and user data.', { token, user, is_admin });
         
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-        
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        router.push('/user/dashboard');
+        localStorage.removeItem('pendingVerificationEmail');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('OTP verification successful, redirecting to dashboard...');
+        
+        if (is_admin) {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/user/dashboard');
+        }
         
         return response.data;
       }

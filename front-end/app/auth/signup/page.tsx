@@ -12,6 +12,7 @@ export default function SignUp() {
   const { register, loading: authLoading, error: authError } = useAuth()
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
     password_confirmation: "",
@@ -44,119 +45,122 @@ export default function SignUp() {
       // Register user with backend
       const response = await register(formData)
       
-      // Redirect to OTP verification page with email
-      router.push(`/auth/verify?email=${encodeURIComponent(formData.email)}`)
+      // Check response for requires_email_verification flag before redirecting
+      if (response && response.requires_email_verification && response.email) {
+        // Store email in localStorage for OTP verification
+        localStorage.setItem('pendingVerificationEmail', response.email);
+        // Clear any existing auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirect to OTP verification page with email
+        router.push(`/auth/verify?email=${encodeURIComponent(response.email)}`);
+      } else {
+        // Handle cases where verification is not required or response is unexpected
+        console.log('Registration successful, but email verification not explicitly required in response.', response);
+        setError('Registration successful, but email verification is required. Please try logging in.');
+        router.push('/auth/signin');
+      }
+
     } catch (err: any) {
       setError(err.message || "An error occurred during registration")
     }
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="flex-1 relative bg-white">
-        {/* Green curved shape at the top right */}
-        <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-[#2e7d32] rounded-bl-full"></div>
-
-        <div className="flex flex-1 items-center justify-center px-4 py-12 z-10 relative">
-          <div className="w-full max-w-md p-8">
-            <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold">SIGNUP FORM</h1>
-              <p className="text-sm text-gray-600 mt-2">Join as a Farmer/User</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="name" className="sr-only">Full Name</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Full Name"
+                value={formData.name}
+                onChange={handleChange}
+              />
             </div>
-
-            {(error || authError) && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
-                {error || authError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
-                  placeholder="Enter your name"
-                  required
-                  disabled={authLoading}
-                />
-              </div>
-
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
-                  placeholder="Enter your email"
-                  required
-                  disabled={authLoading}
-                />
-              </div>
-
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
-                  placeholder="Enter New password"
-                  required
-                  disabled={authLoading}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                  *Use strong password
-                </span>
-              </div>
-
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="password"
-                  id="password_confirmation"
-                  name="password_confirmation"
-                  value={formData.password_confirmation}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5D3FD3]"
-                  placeholder="Confirm password"
-                  required
-                  disabled={authLoading}
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full bg-[#5D3FD3] text-white py-2 rounded-md transition-colors font-bold hover:bg-[#4A2FB8] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {authLoading ? "CREATING ACCOUNT..." : "SIGN UP"}
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm">Already have an account?</p>
-              <Link href="/auth/signin" className="font-medium text-[#5D3FD3] hover:underline text-lg">
-                Sign In here
-              </Link>
+            <div>
+              <label htmlFor="username" className="sr-only">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Username"
+                value={formData.username}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="sr-only">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="password_confirmation" className="sr-only">Confirm Password</label>
+              <input
+                id="password_confirmation"
+                name="password_confirmation"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Confirm Password"
+                value={formData.password_confirmation}
+                onChange={handleChange}
+              />
             </div>
           </div>
-        </div>
 
-        <footer className="text-black text-xs text-center py-2 w-full relative z-10">
-          © {new Date().getFullYear()} Smart Greenhouse Management System
-        </footer>
+          <div>
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Sign up
+            </button>
+          </div>
+        </form>
+
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/auth/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

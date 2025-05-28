@@ -22,6 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'username',
     ];
 
     /**
@@ -45,6 +47,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'email' => 'string',
+            'role' => 'string',
+            'username' => 'string',
         ];
     }
 
@@ -60,5 +64,10 @@ class User extends Authenticatable
             ->where('expires_at', '>', now())
             ->latest()
             ->first();
+    }
+
+    public function isAdmin()
+    {
+        return $this->username === 'Admin';
     }
 }

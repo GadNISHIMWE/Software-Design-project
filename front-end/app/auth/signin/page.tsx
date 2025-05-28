@@ -22,8 +22,11 @@ export default function SignIn() {
     e.preventDefault()
 
     try {
-      await login(formData)
-      router.push("/user/dashboard")
+      const response = await login(formData)
+      
+      // The login function in useAuth will handle the OTP verification redirect
+      // No need to handle redirection here
+      console.log('Login response:', response)
     } catch (err) {
       // Error is handled by the useAuth hook
       console.error('Login error:', err)
