@@ -68,6 +68,12 @@ class OTPService
         // Mark OTP as used
         $latestOTP->update(['is_used' => true]);
 
+        // Mark email as verified ONLY if it\'s not already verified (initial signup)
+        if (!$user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
+        }
+
         return true;
     }
 } 

@@ -18,6 +18,7 @@ import {
 } from "recharts"
 import { Users, Home, AlertTriangle, Activity, TrendingUp, TrendingDown } from "lucide-react"
 import AdminSidebar from "@/components/admin-sidebar"
+import api from "@/lib/api"
 
 // Sample data for charts
 const weeklyData = [
@@ -50,11 +51,35 @@ export default function AdminDashboard() {
     "temperature",
   )
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [users, setUsers] = useState<any[]>([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [usersError, setUsersError] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
+
+  // Fetch users on component mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setUsersLoading(true)
+        const response = await api.get('/api/users')
+        if (response.data.status === 'success') {
+          setUsers(response.data.data)
+        } else {
+          setUsersError(response.data.message || 'Failed to fetch users')
+        }
+      } catch (err: any) {
+        setUsersError(err.message || 'Failed to fetch users')
+      } finally {
+        setUsersLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, []) // Empty dependency array means this runs once on mount
 
   const getMetricColor = (metric: string) => {
     switch (metric) {
@@ -112,10 +137,15 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">24</p>
+                  {usersLoading ? (
+                    <p className="text-2xl font-bold text-gray-900">...</p>
+                  ) : usersError ? (
+                    <p className="text-xl font-bold text-red-600">Error</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                  )}
                   <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-600">+12%</span>
+                    <span className="text-xs text-gray-600">From database</span>
                   </div>
                 </div>
                 <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -171,6 +201,42 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* User Management Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">User Management</h3>
+
+            {usersLoading ? (
+              <div>Loading users...</div>
+            ) : usersError ? (
+              <div className="text-red-600">Error loading users: {usersError}</div>
+            ) : (users.length === 0 ? (
+              <div>No users found in the database.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map((user) => (
+                      <tr key={user.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.username}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.isAdmin ? 'Admin' : 'User'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
 
           {/* Interactive Metrics Selection */}

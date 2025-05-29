@@ -48,7 +48,11 @@ export function useAuth() {
       throw new Error('Unexpected response from server. OTP verification required.');
     } catch (err: any) {
       if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
+        if (err.response.data.message === 'Email not registered. Please register first.') {
+          setError('Email not registered. Please register first.');
+        } else {
+          setError(err.response.data.message);
+        }
       } else {
         setError(err.message || 'Login failed');
       }
@@ -104,14 +108,16 @@ export function useAuth() {
         
         console.log('OTP verification successful. Received token and user data.', { token, user, is_admin });
         
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
         localStorage.removeItem('pendingVerificationEmail');
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        console.log('OTP verification successful, redirecting to dashboard...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('Token set, redirecting to dashboard...');
         
         if (is_admin) {
           router.push('/admin/dashboard');

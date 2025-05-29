@@ -29,9 +29,7 @@ Route::post('/resend-otp', [AuthController::class, 'resendOTP']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Greenhouse routes
@@ -39,4 +37,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('greenhouses', GreenhouseController::class);
     Route::apiResource('plants', PlantController::class);
     Route::apiResource('sensors', SensorController::class);
+
+    // Route to get all users (for admin user management)
+    Route::get('/users', [AuthController::class, 'getUsers']);
+
+    // Route to create a new user (for admin)
+    Route::post('/users', [AuthController::class, 'createUser']);
+
+    // Routes for individual user management actions (for admin)
+    Route::put('/users/{user}', [AuthController::class, 'updateUser']); // Update user details
+    Route::delete('/users/{user}', [AuthController::class, 'deleteUser']); // Delete a user
+    Route::post('/users/{user}/toggle-status', [AuthController::class, 'toggleUserStatus']); // Toggle user status
+    Route::put('/users/{user}/permissions', [AuthController::class, 'updatePermissions']); // Update user permissions
 });

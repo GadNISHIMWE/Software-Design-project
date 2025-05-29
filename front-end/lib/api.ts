@@ -30,7 +30,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     // Handle token expiration
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/api/login') {
       originalRequest._retry = true;
       
       // Clear user data and redirect to login
@@ -59,8 +59,10 @@ api.interceptors.response.use(
 
     // Handle not found errors
     if (error.response?.status === 404) {
+      // Use backend message if available, otherwise use generic message
+      const message = error.response?.data?.message || 'The requested resource was not found';
       return Promise.reject({
-        message: 'The requested resource was not found'
+        message: message
       });
     }
 
