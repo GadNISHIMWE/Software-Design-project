@@ -7,6 +7,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -36,5 +37,40 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });
+    }
+
+    /**
+     * Configure the middleware for the application.
+     *
+     * @return void
+     */
+    protected function configureMiddleware()
+    {
+        $this->app->router->middlewareGroups([
+            'api' => [
+                EnsureFrontendRequestsAreStateful::class,
+                'throttle:api',
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+            'web' => [
+                \Illuminate\Cookie\Middleware\EncryptCookies::class,
+                \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+                \Illuminate\Session\Middleware\StartSession::class,
+                \Illuminate\Session\Middleware\AuthenticateSession::class,
+                \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+        ]);
+    }
+
+    /**
+     * Configure the application's middleware stack.
+     *
+     * @param  \Illuminate\Foundation\Http\Kernel  $kernel
+     * @return void
+     */
+    protected function configureMiddlewareStack(\Illuminate\Foundation\Http\Kernel $kernel)
+    {
+        $kernel->appendToMiddlewareGroup('api', 'auth:sanctum');
     }
 } 

@@ -73,4 +73,9 @@ class User extends Authenticatable implements MustVerifyEmail
         Log::info('isAdmin - Checking Role: ' . $this->role);
         return $this->role === 'admin';
     }
+
+    public function greenhouses()
+    {
+        return $this->hasMany(\App\Models\Greenhouse::class);
+    }
 }

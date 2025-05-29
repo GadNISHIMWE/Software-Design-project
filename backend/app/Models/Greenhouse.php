@@ -35,4 +35,9 @@ class Greenhouse extends Model
     {
         return $this->hasMany(Sensor::class);
     }
+
+    public function systems()
+    {
+        return $this->hasMany(\App\Models\GreenhouseSystem::class);
+    }
 } 

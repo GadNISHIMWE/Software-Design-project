@@ -6,19 +6,38 @@ use App\Http\Controllers\Controller;
 use App\Models\Greenhouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class GreenhouseController extends Controller
 {
     public function index()
     {
         try {
+            Log::info('GreenhouseController index method reached.');
+            Log::info('Fetching greenhouses for authenticated user');
+            
+            if (!Auth::check()) {
+                Log::warning('Greenhouses index: Unauthenticated access.');
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $user = Auth::user();
+            
             // Fetch greenhouses only for the authenticated user
-            $greenhouses = auth()->user()->greenhouses;
+            $greenhouses = $user->greenhouses;
+            
+            Log::info('Greenhouses fetched', ['count' => $greenhouses->count(), 'data' => $greenhouses->toArray()]);
+            
             return response()->json([
                 'status' => 'success',
                 'data' => $greenhouses
             ]);
         } catch (\Exception $e) {
+            Log::error('Failed to fetch greenhouses', ['error' => $e->getMessage()]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to fetch greenhouses',
@@ -30,13 +49,29 @@ class GreenhouseController extends Controller
     public function show($id)
     {
         try {
-            // Find greenhouse for the authenticated user
-            $greenhouse = auth()->user()->greenhouses()->findOrFail($id);
+            Log::info('Fetching single greenhouse', ['id' => $id]);
+            
+            if (!Auth::check()) {
+                Log::warning('Greenhouses show: Unauthenticated access.');
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $user = Auth::user();
+            
+            // Find greenhouse for the authenticated user and load systems relationship
+            $greenhouse = $user->greenhouses()->with('systems')->findOrFail($id);
+            
+            Log::info('Greenhouse fetched successfully', ['id' => $greenhouse->id]);
+            
             return response()->json([
                 'status' => 'success',
                 'data' => $greenhouse
             ]);
         } catch (\Exception $e) {
+            Log::error('Greenhouse not found or failed to fetch', ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Greenhouse not found',
@@ -134,23 +169,147 @@ class GreenhouseController extends Controller
     public function getMetrics($id)
     {
         try {
+            Log::info('Fetching metrics for greenhouse', ['id' => $id]);
+            
+            if (!Auth::check()) {
+                Log::warning('Metrics fetch: Unauthenticated access.');
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $user = Auth::user();
+            
             // Find greenhouse for the authenticated user
-            $greenhouse = auth()->user()->greenhouses()->findOrFail($id);
-            // In a real application, you would fetch this data from sensors
+            $greenhouse = $user->greenhouses()->findOrFail($id);
+            
+            // Get the latest sensor readings for this greenhouse
+            $sensors = $greenhouse->sensors()->with('latestReading')->get();
+            
+            // Initialize metrics with default values
             $metrics = [
-                'temperature' => $greenhouse->temperature ?? 25,
-                'humidity' => $greenhouse->humidity ?? 60,
-                'soil_moisture' => $greenhouse->soil_moisture ?? 75,
-                'light_intensity' => $greenhouse->light_intensity ?? 80,
+                'temperature' => 25,
+                'humidity' => 60,
+                'soil_moisture' => 75,
+                'light_intensity' => 80,
             ];
+            
+            // Update metrics with actual sensor readings if available
+            foreach ($sensors as $sensor) {
+                if ($sensor->latestReading) {
+                    switch ($sensor->type) {
+                        case 'temperature':
+                            $metrics['temperature'] = $sensor->latestReading->value;
+                            break;
+                        case 'humidity':
+                            $metrics['humidity'] = $sensor->latestReading->value;
+                            break;
+                        case 'soil_moisture':
+                            $metrics['soil_moisture'] = $sensor->latestReading->value;
+                            break;
+                        case 'light_intensity':
+                            $metrics['light_intensity'] = $sensor->latestReading->value;
+                            break;
+                    }
+                }
+            }
+            
+            // Update greenhouse with latest metrics (optional, depending on your data model)
+            // $greenhouse->update([
+            //     'temperature' => $metrics['temperature'],
+            //     'humidity' => $metrics['humidity'],
+            //     'soil_moisture' => $metrics['soil_moisture'],
+            //     'light_intensity' => $metrics['light_intensity'],
+            // ]);
+            
+            Log::info('Metrics fetched successfully', ['id' => $id, 'metrics' => $metrics]);
+            
             return response()->json([
                 'status' => 'success',
-                'data' => $metrics
+                'data' => $metrics,
+                'timestamp' => now()->toIso8601String()
             ]);
         } catch (\Exception $e) {
+            Log::error('Failed to fetch greenhouse metrics: ' . $e->getMessage(), ['id' => $id]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to fetch greenhouse metrics',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function controlSystem(Request $request, $id)
+    {
+        try {
+            Log::info('Attempting system control', ['id' => $id, 'request' => $request->all()]);
+
+            $validator = Validator::make($request->all(), [
+                'system' => 'required|string|in:ventilation,irrigation,lighting',
+                'action' => 'required|string|in:on,off,auto',
+                'value' => 'nullable|numeric|min:0|max:100'
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('System control validation failed', ['errors' => $validator->errors(), 'request' => $request->all()]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Find greenhouse for the authenticated user
+            $user = auth()->user();
+            
+            if (!$user) {
+                Log::warning('System control: No authenticated user');
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $greenhouse = $user->greenhouses()->findOrFail($id);
+            
+            // Get the system to control
+            $system = $greenhouse->systems()->where('type', $request->system)->first();
+            
+            if (!$system) {
+                Log::warning('System not found for greenhouse', ['greenhouse_id' => $id, 'system_type' => $request->system]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'System not found'
+                ], 404);
+            }
+
+            // Update system status
+            $system->update([
+                'status' => $request->action,
+                'value' => $request->value ?? $system->value,
+                'last_updated' => now()
+            ]);
+
+            // Log the control action
+            Log::info('Greenhouse system control successful', [
+                'greenhouse_id' => $id,
+                'system' => $request->system,
+                'action' => $request->action,
+                'value' => $request->value,
+                'user_id' => $user->id
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'System control updated successfully',
+                'data' => $system
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to control greenhouse system: ' . $e->getMessage(), ['id' => $id, 'request' => $request->all()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to control greenhouse system',
                 'error' => $e->getMessage()
             ], 500);
         }

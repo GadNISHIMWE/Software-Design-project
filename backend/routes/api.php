@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Greenhouse routes
     Route::get('/greenhouses/{greenhouse}/metrics', [GreenhouseController::class, 'getMetrics']);
+    Route::post('/greenhouses/{greenhouse}/control', [GreenhouseController::class, 'controlSystem']);
     Route::apiResource('greenhouses', GreenhouseController::class);
     Route::apiResource('plants', PlantController::class);
     Route::apiResource('sensors', SensorController::class);

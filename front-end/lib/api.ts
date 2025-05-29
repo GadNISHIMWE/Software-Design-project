@@ -126,9 +126,9 @@ export const endpoints = {
   },
   // Add greenhouse endpoints here once you provide them
   greenhouse: {
-    metrics: '/api/greenhouse/metrics', // This needs to be updated with your actual endpoint
-    control: '/api/greenhouse/control', // This needs to be updated with your actual endpoint
-    settings: '/api/greenhouse/settings', // This needs to be updated with your actual endpoint
+    metrics: (id: number) => `/api/greenhouses/${id}/metrics`,
+    control: (id: number) => `/api/greenhouses/${id}/control`,
+    settings: (id: number) => `/api/greenhouses/${id}/settings`,
   },
   user: {
     profile: '/api/user/profile',

@@ -37,19 +37,71 @@ export function useGreenhouses() {
   const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [singleGreenhouseLoading, setSingleGreenhouseLoading] = useState(false);
+  const [singleGreenhouseError, setSingleGreenhouseError] = useState<string | null>(null);
 
   const fetchGreenhouses = async () => {
     try {
+      console.log('Fetching greenhouses...');
+      console.log('API endpoint:', endpoints.greenhouses.list);
+      
       setLoading(true);
       setError(null);
       const response = await api.get(endpoints.greenhouses.list);
-      setGreenhouses(response.data.data);
+      
+      console.log('Greenhouses response:', response.data);
+      
+      if (response.data.status === 'success' && Array.isArray(response.data.data)) {
+        setGreenhouses(response.data.data);
+      } else {
+        console.error('Invalid response format:', response.data);
+        throw new Error('Invalid response format');
+      }
     } catch (err: any) {
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        url: err.config?.url
+      });
+      
       const errorMessage = err.response?.data?.message || 'Failed to fetch greenhouses';
       setError(errorMessage);
-      console.error('Error fetching greenhouses:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGreenhouseById = async (id: number) => {
+    try {
+      console.log(`Fetching greenhouse with ID: ${id}...`);
+      console.log('API endpoint:', endpoints.greenhouses.show(id));
+
+      setSingleGreenhouseLoading(true);
+      setSingleGreenhouseError(null);
+      const response = await api.get(endpoints.greenhouses.show(id));
+
+      console.log('Greenhouse by ID response:', response.data);
+
+      if (response.data.status === 'success' && response.data.data) {
+        return response.data.data as Greenhouse;
+      } else {
+        console.error('Invalid response format for single greenhouse:', response.data);
+        throw new Error('Invalid response format');
+      }
+    } catch (err: any) {
+      console.error('Error fetching single greenhouse details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        url: err.config?.url
+      });
+
+      const errorMessage = err.response?.data?.message || 'Failed to fetch greenhouse details';
+      setSingleGreenhouseError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setSingleGreenhouseLoading(false);
     }
   };
 
@@ -106,6 +158,7 @@ export function useGreenhouses() {
   };
 
   useEffect(() => {
+    console.log('useGreenhouses hook mounted');
     fetchGreenhouses();
   }, []);
 
@@ -117,5 +170,8 @@ export function useGreenhouses() {
     createGreenhouse,
     updateGreenhouse,
     deleteGreenhouse,
+    fetchGreenhouseById,
+    singleGreenhouseLoading,
+    singleGreenhouseError,
   };
 } 
